@@ -5,25 +5,57 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>XRise VR Platform</title>
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script>
+    // Script to enable jump action with the space key
+    AFRAME.registerComponent('jump-controls', {
+      init: function () {
+        document.addEventListener('keydown', (e) => {
+          if (e.code === 'Space') {
+            const el = this.el;
+            el.setAttribute('position', {
+              x: el.object3D.position.x,
+              y: el.object3D.position.y + 2,
+              z: el.object3D.position.z
+            });
+            setTimeout(() => {
+              el.setAttribute('position', {
+                x: el.object3D.position.x,
+                y: el.object3D.position.y - 2,
+                z: el.object3D.position.z
+              });
+            }, 500);
+          }
+        });
+      }
+    });
+  </script>
 </head>
 <body>
   <a-scene>
     <!-- Background and Sky -->
     <a-sky color="#88d3e3"></a-sky>
     
+    <!-- Ground Plane -->
+    <a-plane position="0 0 -4" rotation="-90 0 0" width="20" height="20" color="#ECECEC"></a-plane>
+
     <!-- Navbar -->
-    <a-entity position="0 2.5 -5">
+    <a-entity position="0 3 -5">
       <a-text value="Home | About | Features | Contact Us" align="center" color="#ffffff" width="6"></a-text>
     </a-entity>
 
-    <!-- Title -->
-    <a-entity position="0 1.5 -4">
-      <a-text value="Welcome to XRise" align="center" color="#ff5722" width="4"></a-text>
+    <!-- Title with Fancy Font -->
+    <a-entity position="0 2 -4">
+      <a-text 
+        value="Welcome to XRise" 
+        align="center" 
+        color="#ff5722" 
+        width="8" 
+        font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-text>
     </a-entity>
 
     <!-- Subtitle -->
-    <a-entity position="0 1.2 -4">
-      <a-text value="Empowering children with ASD through VR" align="center" color="#ffffff" width="3"></a-text>
+    <a-entity position="0 1.5 -4">
+      <a-text value="Empowering children with ASD through VR" align="center" color="#ffffff" width="5"></a-text>
     </a-entity>
 
     <!-- Interactive Sphere Button -->
@@ -63,8 +95,10 @@
       <a-text value="© 2024 XRise Platform - All Rights Reserved" align="center" color="#ffffff" width="3"></a-text>
     </a-entity>
 
-    <!-- Ground -->
-    <a-plane position="0 0 -4" rotation="-90 0 0" width="10" height="10" color="#ECECEC"></a-plane>
+    <!-- Player with Jump Controls -->
+    <a-entity camera look-controls jump-controls position="0 1.6 0">
+      <a-light type="point" color="#ffffff" intensity="0.8"></a-light>
+    </a-entity>
   </a-scene>
 </body>
 </html>

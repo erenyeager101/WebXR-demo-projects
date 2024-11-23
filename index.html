@@ -3,242 +3,217 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>XRise VR Platform</title>
-  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
-
+  <title>Player Jumping Example</title>
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <script src="https://cdn.rawgit.com/donmccurdy/aframe-physics-system/v3.3.0/dist/aframe-physics-system.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe-physics-system@5.0.0/dist/aframe-physics-system.min.js"></script>
   <script>
-AFRAME.registerComponent('player-controller', {
-  init: function () {
-    this.jumping = false;
-    this.jumpStrength = 5;
-
-    // Listen for jump (space key)
-    window.addEventListener('keydown', (event) => {
-      if (event.code === 'Space' && !this.jumping) {
-        this.jumping = true;
-        const body = this.el.body;
-        if (body) {
-          // Apply an upward velocity for the jump
-          body.velocity.set(body.velocity.x, this.jumpStrength, body.velocity.z);
-        }
-      }
-    });
-  },
-  tick: function () {
-    // Reset jumping state when the player is on the ground
-    const positionY = this.el.object3D.position.y;
-    if (positionY <= 1.1) { // Allow slight tolerance above the ground
-      this.jumping = false;
-    }
-  },
-});
-</script>
-
-  <script>
-  // Player Controller for WASD + Jump
-  AFRAME.registerComponent('player-controller', {
-    init: function () {
-      this.jumping = false;
-      this.jumpStrength = 5;
-
-      // Listen for jump (space key)
-      window.addEventListener('keydown', (event) => {
-        if (event.code === 'Space' && !this.jumping) {
-          this.jumping = true;
-          const body = this.el.body;
-          if (body) {
-            body.velocity.set(0, this.jumpStrength, 0); // Apply upward force
+    // Player Movement and Jump Script
+    AFRAME.registerComponent('player-controller', {
+      init: function () {
+        this.velocity = new THREE.Vector3(0, 0, 0);
+        this.jumping = false;
+        this.jumpCooldown = false;
+        this.jumpStrength = 0.3;
+        this.gravity = -0.01;
+  
+        // Listen for key presses
+        document.addEventListener('keydown', (e) => {
+          if (e.key === ' ') this.jump();
+        });
+      },
+      tick: function () {
+        const el = this.el;
+        const velocity = this.velocity;
+        const position = el.object3D.position;
+  
+        if (this.jumping) {
+          velocity.y += this.gravity;
+          position.y += velocity.y;
+  
+          if (position.y <= 1) { // Land back on the ground
+            this.jumping = false;
+            position.y = 1;
+            velocity.y = 0;
           }
         }
-      });
-    },
-    tick: function () {
-      // Reset jumping when the player lands
-      if (this.el.object3D.position.y <= 1) {
-        this.jumping = false;
-      }
-    },
-  });
-
-  // Collectible Logic
-  AFRAME.registerComponent('collectible', {
-    schema: {
-      color: { default: 'yellow' },
-    },
-    init: function () {
-      this.el.setAttribute('geometry', { primitive: 'sphere', radius: 0.3 });
-      this.el.setAttribute('material', { color: this.data.color });
-      this.el.addEventListener('mouseenter', () => {
-        this.el.parentNode.removeChild(this.el); // Remove collectible
-        console.log('Collectible picked up!');
-      });
-    },
-  });
-</script>
-
+        el.object3D.position.copy(position);
+      },
+      jump: function () {
+        if (this.jumping || this.jumpCooldown) return;
+        this.jumping = true;
+        this.velocity.y = this.jumpStrength;
+  
+        // Cooldown to prevent spam
+        this.jumpCooldown = true;
+        setTimeout(() => (this.jumpCooldown = false), 600);
+      },
+    });
+  
+    // Collectible Interaction
+    AFRAME.registerComponent('collectible', {
+      schema: {
+        sound: { type: 'string', default: '' },
+      },
+      init: function () {
+        const el = this.el;
+        const data = this.data;
+  
+        el.addEventListener('mouseenter', () => {
+          // Play sound
+          if (data.sound) {
+            const audio = new Audio(data.sound);
+            audio.play();
+          }
+          // Remove collectible
+          el.parentNode.removeChild(el);
+        });
+      },
+    });
+  </script>
+  <script>
+    // Gradient Shader Definition
+    AFRAME.registerShader('gradient', {
+      schema: {
+        topColor: { type: 'color', default: '#88d3e3' },
+        bottomColor: { type: 'color', default: '#f5f7fa' },
+      },
+      init: function (data) {
+        this.material = new THREE.ShaderMaterial({
+          uniforms: {
+            topColor: { value: new THREE.Color(data.topColor) },
+            bottomColor: { value: new THREE.Color(data.bottomColor) },
+          },
+          vertexShader: `
+            varying vec3 vWorldPosition;
+            void main() {
+              vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+              vWorldPosition = worldPosition.xyz;
+              gl_Position = projectionMatrix * viewMatrix * worldPosition;
+            }
+          `,
+          fragmentShader: `
+            uniform vec3 topColor;
+            uniform vec3 bottomColor;
+            varying vec3 vWorldPosition;
+            void main() {
+              float height = normalize(vWorldPosition).y;
+              gl_FragColor = vec4(mix(bottomColor, topColor, height * 0.5 + 0.5), 1.0);
+            }
+          `,
+          side: THREE.BackSide,
+          depthWrite: false,
+        });
+      },
+    });
+  </script>
+  
+  
+  
+  
 </head>
 <body>
-  <a-entity 
-  id="player" 
-  camera 
-  wasd-controls 
-  look-controls="pointerLockEnabled: true" 
-  dynamic-body 
-  player-controller 
-  movement-controls="speed: 2">
-</a-entity>
+    <a-scene physics="debug: true; gravity: -9.8" obb-collider="showColliders: true">
+        <!-- Background Music -->
+        <a-sound id="backgroundSound" src="sound.mp3" loop="true"></a-sound>
+
+      
+      <!-- Sky -->
+       <!-- Sky -->
+       <a-sky material="shader: gradient; topColor: #88d3e3; bottomColor: #f5f7fa"></a-sky>
 
 
+  <!-- Ground -->
+  <a-plane position="0 0 0" rotation="-90 0 0" width="50" height="50" color="#8BC34A" static-body></a-plane>
 
-<a-scene vr-mode-ui="enabled: true" physics="gravity: -9.8">
+  <!-- Trees -->
+  <a-cone position="6 0.5 -5" radius-bottom="0.5" radius-top="0.1" height="2" color="#795548"></a-cone>
+  <a-sphere position="6 2.5 -5" radius="1.5" color="#4CAF50"></a-sphere>
+  <a-cone position="-4 0.5 -8" radius-bottom="0.5" radius-top="0.1" height="2" color="#795548"></a-cone>
+  <a-sphere position="-4 2.5 -8" radius="1.5" color="#4CAF50"></a-sphere>
 
-    <!-- Background and Sky -->
-    <a-sky color="#88d3e3"></a-sky>
+  <!-- Platforms -->
+  <a-box position="5 1 -4" depth="2" height="0.2" width="4" color="#4CC3D9" static-body></a-box>
+  <a-cylinder position="5 1 -8" radius="1.5" height="0.2" color="#FFC65D" static-body></a-cylinder>
 
-    <!-- Player -->
-   
+  <!-- Animated Collectible -->
+  <a-sphere position="4 2 -5" radius="0.5" color="#FFD700" 
+    animation="property: position; to: 2 2.2 -5; dir: alternate; dur: 1000; loop: true"
+    collectible="sound: sound.mp3"></a-sphere>
 
-    <!-- Collectibles -->
-    <a-entity position="-3 0.5 -3" 
-      geometry="primitive: sphere; radius: 0.3" 
-      material="color: yellow" 
-      collectible="sound: https://cdn.pixabay.com/download/audio/2022/10/31/audio_1ef60c8f2f.mp3">
-    </a-entity>
-    <a-entity position="2 0.5 -4" 
-      geometry="primitive: sphere; radius: 0.3" 
-      material="color: yellow" 
-      collectible="sound: https://cdn.pixabay.com/download/audio/2022/10/31/audio_1ef60c8f2f.mp3">
-    </a-entity>
-   <a-entity position="-3 0.5 -3"
-  geometry="primitive: sphere; radius: 0.3"
-  material="color: yellow"
-  event-set__mouseenter="_event: play"
->
-  <a-sound src="https://cdn.pixabay.com/download/audio/2022/10/31/audio_1ef60c8f2f.mp3" autoplay="false"></a-sound>
-</a-entity>
-    <!-- Navbar -->
-    <a-entity position="0 3.7 -5">
-      <a-text value="Home | About | Features | Contact Us" align="center" color="#ffffff" width="6"></a-text>
-    </a-entity>
-    <a-entity position="-3 1.5 -4">
-      <a-box color="#4CC3D9" depth="0.1" height="1" width="1.5"></a-box>
-      <a-text value="About Us" color="#ffffff" align="center" position="0 0.3 0.06" width="9"></a-text>
-    </a-entity>
+  <!-- Glowing Trail -->
+  <a-entity geometry="primitive: plane; width: 1; height: 40" position="0.1 0.01 -3" rotation="-90 0 0" 
+    material="color: #FFFFFF; opacity: 0.3; side: double"></a-entity>
 
-    <a-entity position="0 1.5 -4">
-      <a-box color="#FFC65D" depth="0.1" height="1" width="1.5" static-body></a-box>
-      <a-text value="Features" color="#ffffff" align="center" position="0 0.3 0.06" width="8.5"></a-text>
-    </a-entity>
-
-    <a-entity position="3 1.5 -4" static-body>
-      <a-box color="#FF5722" depth="0.1" height="1" width="1.5"></a-box>
-      <a-text value="Contact" color="#ffffff" align="center" position="0 0.3 0.06" width="9"></a-text>
-    </a-entity>
-
-    <a-entity position="0 4 -4" static-body>
-      <a-text 
-        value="Welcome to XRise" 
-        align="center" 
-        color="#ff5722" 
-        width="8" 
-        font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-text>
-    </a-entity>
-
-    <a-entity position="0 3.5 -4" static-body>
-      <a-text value="Empowering children with ASD through VR" align="center" color="#ffffff" width="5"></a-text>
-    </a-entity>
-
-    <a-sphere 
-      position="0 0.5 -3" 
-      radius="0.5" 
-      color="#EF2D5E" 
-      animation__hover="property: scale; to: 1.2 1.2 1.2; startEvents: mouseenter"
-      animation__leave="property: scale; to: 1 1 1; startEvents: mouseleave"
-      event-set__click="color: #FFC65D"
-      onclick="alert('Button clicked! Navigating to Features page.')">
-    </a-sphere>
-    <a-sphere 
-      position="0 1.5 -6d" 
-      radius="0.9" 
-      color="#EF2D5E" 
-      animation__hover="property: scale; to: 1.2 1.2 1.2; startEvents: mouseenter"
-      animation__leave="property: scale; to: 1 1 1; startEvents: mouseleave"
-      event-set__click="color: #FFC65D"
-      onclick="alert('Button clicked! Navigating to Features page.')">
-    </a-sphere>
-
-    <a-torus position="-2 0.5 -3" radius="1" radius-tubular="0.2" color="#7BC8A4"></a-torus>
-    <a-cylinder position="2 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
-    <a-sphere position="1.5 2 -3.5" radius="0.5" color="#4CC3D9"></a-sphere>
-    <a-cylinder position="-5 0.75 -10" radius="0.2" height="3" color="#8B4513" static-body></a-cylinder>
-    <a-sphere position="-5 3 -10" radius="1" color="#228B22" static-body></a-sphere>
-
-    <a-cylinder position="5 0.75 -10" radius="0.2" height="3" color="#8B4513" static-body></a-cylinder>
-    <a-sphere position="5 3 -10" radius="1" color="#228B22" static-body></a-sphere>
-
-    <!-- New Elements -->
-    <!-- Car -->
-    <a-entity position="2 0 -5" rotation="0 45 0">
-      <a-box position="0 0.5 0" depth="2" height="0.5" width="1" color="blue" static-body></a-box>
-      <a-box position="0 1 0.5" depth="0.5" height="0.5" width="1" color="blue"></a-box>
-      <a-cylinder position="0.5 0 0.9" radius="0.2" height="0.1" color="black"></a-cylinder>
-      <a-cylinder position="-0.5 0 0.9" radius="0.2" height="0.1" color="black" static-body></a-cylinder>
-      <a-cylinder position="0.5 0 -0.9" radius="0.2" height="0.1" color="black" static-body></a-cylinder>
-      <a-cylinder position="-0.5 0 -0.9" radius="0.2" height="0.1" color="black" static-body></a-cylinder>
-    </a-entity>
+  
+      <!-- Welcome Text -->
+      <a-entity position="0 6 -4" static-body obb-collider="showColliders: true">
+          <a-text value="Welcome to XRise" align="center" color="#ff5722" width="8" font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-text>
+      </a-entity>
     
-    <!-- House -->
-    <a-entity position="-2 0 -5" static-body>
-      <a-box position="0 1 0" depth="2" height="2" width="2" color="#8B4513"></a-box>
-      <a-cone position="0 2 0" radius-bottom="1.2" height="1" color="#D2691E"></a-cone>
-    </a-entity>
-    
-    <!-- Complex 3D Figure (Tree) -->
-    <a-cylinder position="-3 0 -3" radius="0.2" height="2" color="#8B4513"></a-cylinder>
-    <a-sphere position="-3 2 -3" radius="1" color="#228B22"></a-sphere>
-    <a-sphere position="-3 2.5 -3" radius="0.8" color="#228B22"></a-sphere>
-    <a-sphere position="-3 3 -3" radius="0.6" color="#228B22"></a-sphere>
+      <!-- Instructions Text -->
+      <!-- <a-entity position="0 3.7 -4" static-body obb-collider="showColliders: true">
+        <a-text value="Empowering children with ASD through VR" align="center" color="#ff5722" width="8" font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-text>
+      </a-entity> -->
+  
+      
+      <a-box position="4.5 -3 -5" depth="2" height="0.2" width="5" color="#4CC3D9" static-body obb-collider="showColliders: true"></a-box>
+  
+      <!-- Custom Platform 2: A Circular Platform -->
+      <a-cylinder position="-5 2 -3" radius="2" height="0.2" color="#FFC65D" static-body obb-collider="showColliders: true"></a-cylinder>
+      <a-box animation="property: rotation; to: 0 360 0; loop: true; dur: 3000" ... ></a-box>
+      <a-sphere collectible="sound: sound.mp3" position="2 2 -5" color="#FFD700" ...></a-sphere>
 
-    <a-entity position="0 -1 -4" static-body>
-      <a-text value="© 2024 XRise Platform - All Rights Reserved" align="center" color="#ffffff" width="3"></a-text>
-    </a-entity>
 
-    <a-plane position="0 0 -4" rotation="-90 0 0" width="50" height="50" color="#00FF00"></a-plane>
-  </a-scene>
-  <a-entity position="0 0.5 -3" collectible></a-entity>
-<a-entity position="1 0.5 -4" collectible></a-entity>
-<a-entity position="-1 0.5 -5" collectible></a-entity>
+      <!-- Custom Platform 3: A Stepped Block Platform -->
+      <a-box position="-4 0 -12" depth="2" height="0.5" width="2" color="#EF2D5E" static-body obb-collider="showColliders: true"></a-box>
+      <a-box position="-3 0.5 -12" depth="2" height="0.5" width="2" color="#FFC65D" static-body obb-collider="showColliders: true"></a-box>
+  
+      <a-entity position="1 1 -3">
+        <a-sphere radius="0.5" color="#F06292"></a-sphere>
+        <a-text value="Hi! Follow the glowing path to explore!" align="center" color="#000" position="0 -0.5 0"></a-text>
+      </a-entity>
+      
+      <a-light type="ambient" color="#FFFFFF" intensity="0.5"></a-light>
+<a-sphere position="2 -1 -5" radius="2" color="#9FA8DA"></a-sphere>
+<a-sound src="sound.mp3" autoplay="true" loop="true"></a-sound>
 
-    
+  
+<a-box id="slot1" position="3 1 -5" depth="0.5" height="1" width="1" color="#4CC3D9"></a-box>
+<a-box position="0 1 -5" dynamic-body draggable></a-box>
 
-    <!-- Ground Plane -->
-    <a-plane real-world-meshing
-      position="0 0 -4" 
-      rotation="-90 0 0" 
-      width="50" 
-      height="50" 
-      color="#00FF00">
-    </a-plane>
+     <!-- Player -->
+    <a-entity id="player" camera wasd-controls look-controls="pointerLockEnabled: true" player-controller position="0 1 0" dynamic-body="mass: 10; friction: 0.5" collision-filter="group: player; mask: world"></a-entity>
 
-    <!-- 3D Objects (Environment) -->
-    <a-cylinder position="2 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
-    <a-sphere position="1.5 2 -3.5" radius="0.5" color="#4CC3D9"></a-sphere>
-    <a-cylinder position="-5 0.75 -10" radius="0.2" height="3" color="#8B4513"></a-cylinder>
-    <a-sphere position="-5 3 -10" radius="1" color="#228B22"></a-sphere>
-    <a-cylinder position="5 0.75 -10" radius="0.2" height="3" color="#8B4513"></a-cylinder>
-    <a-sphere position="5 3 -10" radius="1" color="#228B22"></a-sphere>
-
-    <!-- Footer -->
-    <a-entity position="0 -1 -4" static-body>
-      <a-text 
-        value="© 2024 XRise Platform - All Rights Reserved" 
-        align="center" 
-        color="#ffffff" 
-        width="3">
-      </a-text>
-    </a-entity>
-  </a-scene>
-</body>
+      <!-- Ground -->
+      <a-plane position="0 0 0" rotation="-90 0 0" width="50" height="50" color="#00FF00" static-body></a-plane>
+  
+      <!-- UI Text at the Top -->
+      <a-entity position="0 3.7 -5" static-body obb-collider>
+        <a-text value="Home | About | Features | Contact Us" align="center" color="#ff5722" width="8" font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-text>
+      </a-entity>
+  
+      <!-- More UI for navigation -->
+      <a-entity position="-3 4.5 -4" static-body obb-collider>
+        <a-box color="#4CC3D9" depth="0.1" height="1" width="1.5"></a-box>
+        <a-text value="About Us" color="#ffffff" align="center" position="0 0.3 0.06" width="9"></a-text>
+      </a-entity>
+  
+      <a-entity position="0 4.5 -4" static-body obb-collider>
+        <a-box color="#FFC65D" depth="0.1" height="1" width="1.5" static-body></a-box>
+        <a-text value="Features" color="#ffffff" align="center" position="0 0.3 0.06" width="8.5"></a-text>
+      </a-entity>
+  
+      <a-entity position="3 4.5 -4" static-body obb-collider>
+        <a-box color="#FF5722" depth="0.1" height="1" width="1.5"></a-box>
+        <a-text value="Contact" color="#ffffff" align="center" position="0 0.3 0.06" width="9"></a-text>
+      </a-entity>
+    </a-scene>
+  </body>
+  <script>
+    document.body.addEventListener('click', () => {
+      const audioEl = document.querySelector('#backgroundSound');
+      audioEl.components.sound.playSound();
+    }, { once: true }); // Only listen to the first click
+  </script>
+  
 </html>

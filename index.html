@@ -219,7 +219,7 @@
       const gamma = event.gamma; // Rotation around the y-axis
 
       // Send orientation data to the server (Raspberry Pi)
-      fetch('http://<Raspberry_Pi_IP>:5000/orientation', {
+      fetch('http://192.168.1.8:5000/orientation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

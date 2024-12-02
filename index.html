@@ -207,12 +207,37 @@
         <a-text value="Contact" color="#ffffff" align="center" position="0 0.3 0.06" width="9"></a-text>
       </a-entity>
     </a-scene>
+  
   </body>
+  <script>
+  // Check if DeviceOrientationEvent is supported
+  if (window.DeviceOrientationEvent) {
+    window.addEventListener('deviceorientation', (event) => {
+      // Get the orientation data
+      const alpha = event.alpha; // Rotation around the z-axis
+      const beta = event.beta;   // Rotation around the x-axis
+      const gamma = event.gamma; // Rotation around the y-axis
+
+      // Send orientation data to the server (Raspberry Pi)
+      fetch('http://<Raspberry_Pi_IP>:5000/orientation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ alpha, beta, gamma })
+      });
+    });
+  } else {
+    console.log('DeviceOrientationEvent not supported on this device.');
+  }
+</script>
+
   <script>
     document.body.addEventListener('click', () => {
       const audioEl = document.querySelector('#backgroundSound');
       audioEl.components.sound.playSound();
     }, { once: true }); // Only listen to the first click
   </script>
+  
   
 </html>

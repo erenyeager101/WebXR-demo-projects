@@ -215,48 +215,8 @@
     </a-scene>
   
   </body>
-  <script>
-  // Check if DeviceOrientationEvent is supported
-  if (window.DeviceOrientationEvent) {
-    window.addEventListener('deviceorientation', (event) => {
-      // Get the orientation data
-      const alpha = event.alpha; // Rotation around the z-axis
-      const beta = event.beta;   // Rotation around the x-axis
-      const gamma = event.gamma; // Rotation around the y-axis
-
-      // Send orientation data to the server (Raspberry Pi)
-      fetch('http://192.168.1.8:5000/orientation', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ alpha, beta, gamma })
-      });
-    });
-  } else {
-    console.log('DeviceOrientationEvent not supported on this device.');
-  }
-</script>
-
-  <script>
-    document.body.addEventListener('click', () => {
-      const audioEl = document.querySelector('#backgroundSound');
-      audioEl.components.sound.playSound();
-    }, { once: true }); // Only listen to the first click
-  </script>
-  <script>
-  async function fetchOrientationData() {
-    const response = await fetch('http://192.168.1.8:5000/orientation');
-    const data = await response.json();
-    
-    const { alpha, beta, gamma } = data;
-
-    // Apply the rotation to the camera in A-Frame
-    document.querySelector('a-camera').setAttribute('rotation', `${beta} ${alpha} ${gamma}`);
-  }
-
-  setInterval(fetchOrientationData, 100); // Fetch data every 100ms
-</script>
+ 
+ 
 
   
   

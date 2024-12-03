@@ -3,218 +3,84 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Player Jumping Example</title>
-  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/aframe-physics-system@5.0.0/dist/aframe-physics-system.min.js"></script>
-  <script>
-    AFRAME.registerComponent('player-controller', {
-      init: function () {
-        this.velocity = new THREE.Vector3(0, 0, 0);
-        this.jumping = false;
-        this.jumpCooldown = false;
-        this.jumpStrength = 0.3;
-        this.gravity = -0.01;
-  
-        // Listen for key presses
-        document.addEventListener('keydown', (e) => {
-          if (e.key === ' ') this.jump();
-        });
-      },
-      tick: function () {
-        const el = this.el;
-        const velocity = this.velocity;
-        const position = el.object3D.position;
-  
-        if (this.jumping) {
-          velocity.y += this.gravity;
-          position.y += velocity.y;
-  
-          if (position.y <= 1) { // Land back on the ground
-            this.jumping = false;
-            position.y = 1;
-            velocity.y = 0;
-          }
-        }
-        el.object3D.position.copy(position);
-      },
-      jump: function () {
-        if (this.jumping || this.jumpCooldown) return;
-        this.jumping = true;
-        this.velocity.y = this.jumpStrength;
-  
-        // Cooldown to prevent spam
-        this.jumpCooldown = true;
-        setTimeout(() => (this.jumpCooldown = false), 600);
-      },
-    });
-  
-    // Collectible Interaction
-    AFRAME.registerComponent('collectible', {
-      schema: {
-        sound: { type: 'string', default: '' },
-      },
-      init: function () {
-        const el = this.el;
-        const data = this.data;
-  
-        el.addEventListener('mouseenter', () => {
-          // Play sound
-          if (data.sound) {
-            const audio = new Audio(data.sound);
-            audio.play();
-          }
-          // Remove collectible
-          el.parentNode.removeChild(el);
-        });
-      },
-    });
-  </script>
-  <script>
-    // Gradient Shader Definition
-    AFRAME.registerShader('gradient', {
-      schema: {
-        topColor: { type: 'color', default: '#88d3e3' },
-        bottomColor: { type: 'color', default: '#f5f7fa' },
-      },
-      init: function (data) {
-        this.material = new THREE.ShaderMaterial({
-          uniforms: {
-            topColor: { value: new THREE.Color(data.topColor) },
-            bottomColor: { value: new THREE.Color(data.bottomColor) },
-          },
-          vertexShader: `
-            varying vec3 vWorldPosition;
-            void main() {
-              vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-              vWorldPosition = worldPosition.xyz;
-              gl_Position = projectionMatrix * viewMatrix * worldPosition;
-            }
-          `,
-          fragmentShader: `
-            uniform vec3 topColor;
-            uniform vec3 bottomColor;
-            varying vec3 vWorldPosition;
-            void main() {
-              float height = normalize(vWorldPosition).y;
-              gl_FragColor = vec4(mix(bottomColor, topColor, height * 0.5 + 0.5), 1.0);
-            }
-          `,
-          side: THREE.BackSide,
-          depthWrite: false,
-        });
-      },
-    });
-  </script>
-  
-  
-  
-  
+  <title>Bouncing Ball AR Game</title>
+  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  <script src="https://cdn.rawgit.com/jeromeetienne/ar.js/2.2.0/aframe/build/aframe-ar.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    #startButton {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 18px;
+      cursor: pointer;
+      z-index: 9999;
+    }
+  </style>
 </head>
 <body>
-    <a-scene physics="debug: true; gravity: -9.8" obb-collider="showColliders: true">
-        <!-- Background Music -->
-        <a-sound id="backgroundSound" src="https://github.com/erenyeager101/WebXR-demo-projects/blob/main/sound.mp3" loop="true"></a-sound>
+  <button id="startButton" onclick="startAR()">Start AR Game</button>
 
-      
-      <!-- Sky -->
-       <!-- Sky -->
-       <a-sky material="shader: gradient; topColor: #88d3e3; bottomColor: #f5f7fa"></a-sky>
-      <a-scene>
-  
+  <a-scene embedded arjs>
+    <!-- User Camera -->
+    <a-camera position="0 1.6 0"></a-camera>
 
+    <!-- Ball -->
+    <a-entity id="ball" geometry="primitive: sphere; radius: 0.1" 
+              material="color: red" 
+              position="0 1 -2"
+              dynamic-body></a-entity>
 
+    <!-- Ground plane detection -->
+    <a-entity id="ground" geometry="primitive: plane; width: 10; height: 10"
+              rotation="-90 0 0"
+              material="opacity: 0; shader: flat" 
+              static-body></a-entity>
+  </a-scene>
 
-  <!-- Ground -->
-  <a-plane position="0 0 0" rotation="-90 0 0" width="50" height="50" color="#8BC34A" static-body></a-plane>
+  <script>
+    // Wait for the scene to load before starting physics
+    AFRAME.registerComponent('ground-bounce', {
+      init: function () {
+        this.el.addEventListener('body-loaded', () => {
+          this.ball = document.querySelector('#ball');
+          this.ground = document.querySelector('#ground');
+          this.velocity = new THREE.Vector3(0, -0.1, 0);
 
-  <!-- Trees -->
-  <a-cone position="6 0.5 -5" radius-bottom="0.5" radius-top="0.1" height="2" color="#795548"></a-cone>
-  <a-sphere position="6 2.5 -5" radius="1.5" color="#4CAF50"></a-sphere>
-  <a-cone position="-4 0.5 -8" radius-bottom="0.5" radius-top="0.1" height="2" color="#795548"></a-cone>
-  <a-sphere position="-4 2.5 -8" radius="1.5" color="#4CAF50"></a-sphere>
+          this.el.sceneEl.addEventListener('tick', this.updateBall.bind(this));
+        });
+      },
+      updateBall: function () {
+        const ball = this.ball.object3D;
+        const ground = this.ground.object3D;
 
-  <!-- Platforms -->
-  <a-box position="5 1 -4" depth="2" height="0.2" width="4" color="#4CC3D9" static-body></a-box>
-  <a-cylinder position="5 1 -8" radius="1.5" height="0.2" color="#FFC65D" static-body></a-cylinder>
+        // Check if the ball is above the ground
+        if (ball.position.y <= 0.05) {
+          // Reverse Y velocity to simulate bounce
+          this.velocity.y = Math.abs(this.velocity.y);
+        } else {
+          // Apply gravity
+          this.velocity.y -= 0.005;
+        }
 
-  <!-- Animated Collectible -->
-  <a-sphere position="4 2 -5" radius="0.5" color="#FFD700" 
-    animation="property: position; to: 2 2.2 -5; dir: alternate; dur: 1000; loop: true"
-    collectible="sound: https://github.com/erenyeager101/WebXR-demo-projects/blob/main/sound.mp3"></a-sphere>
+        // Update ball position
+        ball.position.add(this.velocity);
+      }
+    });
 
-  <!-- Glowing Trail -->
-  <a-entity geometry="primitive: plane; width: 1; height: 40" position="0.1 0.01 -3" rotation="-90 0 0" 
-    material="color: #FFFFFF; opacity: 0.3; side: double"></a-entity>
-
-  
-      <!-- Welcome Text -->
-      <a-entity position="0 6 -4" static-body obb-collider="showColliders: true">
-          <a-text value="Welcome to XRise" align="center" color="#ff5722" width="8" font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-text>
-      </a-entity>
-    
-      <!-- Instructions Text -->
-      <!-- <a-entity position="0 3.7 -4" static-body obb-collider="showColliders: true">
-        <a-text value="Empowering children with ASD through VR" align="center" color="#ff5722" width="8" font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-text>
-      </a-entity> -->
-  
-      
-      <a-box position="4.5 -3 -5" depth="2" height="0.2" width="5" color="#4CC3D9" static-body obb-collider="showColliders: true"></a-box>
-  
-      <!-- Custom Platform 2: A Circular Platform -->
-      <a-cylinder position="-5 2 -3" radius="2" height="0.2" color="#FFC65D" static-body obb-collider="showColliders: true"></a-cylinder>
-      <a-box animation="property: rotation; to: 0 360 0; loop: true; dur: 3000" ... ></a-box>
-      <a-sphere collectible="sound: sound.mp3" position="2 2 -5" color="#FFD700" ...></a-sphere>
-
-
-      <!-- Custom Platform 3: A Stepped Block Platform -->
-      <a-box position="-4 0 -12" depth="2" height="0.5" width="2" color="#EF2D5E" static-body obb-collider="showColliders: true"></a-box>
-      <a-box position="-3 0.5 -12" depth="2" height="0.5" width="2" color="#FFC65D" static-body obb-collider="showColliders: true"></a-box>
-  
-      <a-entity position="1 1 -3">
-        <a-sphere radius="0.5" color="#F06292"></a-sphere>
-        <a-text value="Hi! Follow the glowing path to explore!" align="center" color="#000" position="0 -0.5 0"></a-text>
-      </a-entity>
-      
-      <a-light type="ambient" color="#FFFFFF" intensity="0.5"></a-light>
-<a-sphere position="2 -1 -5" radius="2" color="#9FA8DA"></a-sphere>
-<a-sound src="sound.mp3" autoplay="true" loop="true"></a-sound>
-
-  
-<a-box id="slot1" position="3 1 -5" depth="0.5" height="1" width="1" color="#4CC3D9"></a-box>
-<a-box position="0 1 -5" dynamic-body draggable></a-box>
-
-     <!-- Player -->
-    <a-entity id="player" camera wasd-controls look-controls="pointerLockEnabled: true" player-controller position="0 1 0" dynamic-body="mass: 10; friction: 0.5" collision-filter="group: player; mask: world"></a-entity>
-
-      <!-- Ground -->
-      <a-plane position="0 0 0" rotation="-90 0 0" width="50" height="50" color="#00FF00" static-body></a-plane>
-  
-      <!-- UI Text at the Top -->
-      <a-entity position="0 3.7 -5" static-body obb-collider>
-        <a-text value="Home | About | Features | Contact Us" align="center" color="#ff5722" width="8" font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-text>
-      </a-entity>
-  
-      <!-- More UI for navigation -->
-      <a-entity position="-3 4.5 -4" static-body obb-collider>
-        <a-box color="#4CC3D9" depth="0.1" height="1" width="1.5"></a-box>
-        <a-text value="About Us" color="#ffffff" align="center" position="0 0.3 0.06" width="9"></a-text>
-      </a-entity>
-  
-      <a-entity position="0 4.5 -4" static-body obb-collider>
-        <a-box color="#FFC65D" depth="0.1" height="1" width="1.5" static-body></a-box>
-        <a-text value="Features" color="#ffffff" align="center" position="0 0.3 0.06" width="8.5"></a-text>
-      </a-entity>
-  
-      <a-entity position="3 4.5 -4" static-body obb-collider>
-        <a-box color="#FF5722" depth="0.1" height="1" width="1.5"></a-box>
-        <a-text value="Contact" color="#ffffff" align="center" position="0 0.3 0.06" width="9"></a-text>
-      </a-entity>
-    </a-scene>
-  
-  </body>
- 
- 
-
-  
-  
+    function startAR() {
+      document.querySelector('a-scene').setAttribute('ground-bounce', '');
+      document.getElementById('startButton').style.display = 'none';
+    }
+  </script>
+</body>
 </html>

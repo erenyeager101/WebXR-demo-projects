@@ -1,92 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bouncing Ball AR Game</title>
-  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-  <script src="https://cdn.rawgit.com/jeromeetienne/ar.js/2.2.0/aframe/build/aframe-ar.min.js"></script>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-    }
-    #startButton {
-      position: absolute;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 10px 20px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      font-size: 18px;
-      cursor: pointer;
-      z-index: 9999;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Bouncing Ball Game</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe-ar@latest/dist/aframe-ar.min.js"></script>
 </head>
-<body>
-  <button id="startButton" onclick="startAR()">Start AR Game</button>
+<body style="margin: 0; overflow: hidden;">
+    <a-scene 
+        vr-mode-ui="enabled: false" 
+        embedded 
+        arjs="sourceType: webcam; debugUIEnabled: false;">
+        
+        <!-- Ball -->
+        <a-sphere id="ball" 
+                  position="0 1 -2" 
+                  radius="0.1" 
+                  color="#FF4500" 
+                  dynamic-body></a-sphere>
 
-  <a-scene embedded arjs>
-    <!-- Camera -->
-    <a-camera position="0 1.6 0"></a-camera>
+        <!-- Ground -->
+        <a-plane position="0 0 -2" 
+                 rotation="-90 0 0" 
+                 width="4" 
+                 height="4" 
+                 color="#4CAF50" 
+                 static-body></a-plane>
 
-    <!-- Ball -->
-    <a-entity id="ball"
-              geometry="primitive: sphere; radius: 0.15"
-              material="color: red; shader: standard"
-              position="0 1.5 -1"
-              dynamic-body
-              bounce-ball></a-entity>
+        <!-- Light -->
+        <a-light type="directional" position="0 4 -2" intensity="1"></a-light>
 
-    <!-- Ground -->
-    <a-entity id="ground"
-              geometry="primitive: plane; width: 10; height: 10"
-              material="color: white; opacity: 0"
-              position="0 0 0"
-              rotation="-90 0 0"></a-entity>
-  </a-scene>
+        <!-- Camera -->
+        <a-camera position="0 1.6 0"></a-camera>
+    </a-scene>
 
-  <script>
-    // Component to handle ball bouncing behavior
-    AFRAME.registerComponent('bounce-ball', {
-      init: function () {
-        this.ball = this.el;
-        this.velocity = new THREE.Vector3(0, -0.01, 0); // Initial downward velocity
-        this.gravity = -0.005; // Gravity value
-        this.bounceFactor = 0.15; // Bounce height multiplier
-        this.minY = 0.15; // Ground level (slightly above ground)
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const ball = document.querySelector('#ball');
+            const initialVelocity = new THREE.Vector3(0, 3, -3);
 
-        // Listen for the click event to make the ball bounce
-        this.ball.addEventListener('click', () => {
-          this.velocity.y = this.bounceFactor; // Set upward velocity
+            const throwBall = () => {
+                const el = ball.getAttribute('velocity') || new THREE.Vector3();
+                ball.setAttribute('velocity', {
+                    x: initialVelocity.x,
+                    y: initialVelocity.y,
+                    z: initialVelocity.z
+                });
+            };
+
+            // Event listeners for throwing the ball
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'w') throwBall();
+            });
+            document.addEventListener('click', throwBall);
+            document.addEventListener('touchstart', throwBall);
         });
-
-        // Update position on every frame
-        this.el.sceneEl.addEventListener('tick', this.updatePosition.bind(this));
-      },
-
-      updatePosition: function () {
-        const position = this.ball.object3D.position;
-
-        // Apply gravity and update position
-        this.velocity.y += this.gravity;
-        position.add(this.velocity);
-
-        // Check collision with ground
-        if (position.y <= this.minY) {
-          position.y = this.minY;
-          this.velocity.y = 0; // Stop downward movement
-        }
-      }
-    });
-
-    function startAR() {
-      document.querySelector('#startButton').style.display = 'none';
-    }
-  </script>
+    </script>
 </body>
 </html>

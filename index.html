@@ -35,48 +35,64 @@
     <a-camera position="0 1.6 0"></a-camera>
 
     <!-- Ball -->
-    <a-entity id="ball" geometry="primitive: sphere; radius: 0.1" 
+    <a-entity id="ball" 
+              geometry="primitive: sphere; radius: 0.15" 
               material="color: red" 
-              position="0 1 -2"
-              dynamic-body></a-entity>
+              position="0 2 -2" 
+              dynamic-body
+              class="interactive"
+              bounce-ball></a-entity>
 
     <!-- Ground plane detection -->
-    <a-entity id="ground" geometry="primitive: plane; width: 10; height: 10"
+    <a-entity id="ground" 
+              geometry="primitive: plane; width: 10; height: 10"
               rotation="-90 0 0"
               material="opacity: 0; shader: flat" 
               static-body></a-entity>
   </a-scene>
 
   <script>
-    // Wait for the scene to load before starting physics
-    AFRAME.registerComponent('ground-bounce', {
+    // Custom Component to handle ball interaction and bouncing
+    AFRAME.registerComponent('bounce-ball', {
       init: function () {
-        this.el.addEventListener('body-loaded', () => {
-          this.ball = document.querySelector('#ball');
-          this.ground = document.querySelector('#ground');
-          this.velocity = new THREE.Vector3(0, -0.1, 0);
+        this.ball = this.el;
+        this.velocity = new THREE.Vector3(0, -0.02, 0); // Initial velocity (falling)
+        this.isFalling = true;
 
-          this.el.sceneEl.addEventListener('tick', this.updateBall.bind(this));
-        });
+        // Detect click event
+        this.el.addEventListener('click', this.bounce.bind(this));
+
+        // Handle gravity and collision detection
+        this.el.sceneEl.addEventListener('tick', this.updatePosition.bind(this));
       },
-      updateBall: function () {
-        const ball = this.ball.object3D;
-        const ground = this.ground.object3D;
 
-        // Check if the ball is above the ground
-        if (ball.position.y <= 0.05) {
-          // Reverse Y velocity to simulate bounce
-          this.velocity.y = Math.abs(this.velocity.y);
-        } else {
-          // Apply gravity
-          this.velocity.y -= 0.005;
+      bounce: function () {
+        // When the user clicks, make the ball bounce upward
+        this.velocity.y = 0.15; // Bounce height
+        this.isFalling = true;
+      },
+
+      updatePosition: function () {
+        const ball = this.ball.object3D;
+
+        // Apply gravity when falling
+        if (this.isFalling) {
+          this.velocity.y -= 0.005; // Gravity effect
         }
 
-        // Update ball position
+        // Update ball position based on velocity
         ball.position.add(this.velocity);
+
+        // Check for collision with the ground
+        if (ball.position.y <= 0.15) { // Adjust based on ball radius
+          ball.position.y = 0.15;  // Reset to ground level
+          this.velocity.y = 0;     // Stop vertical velocity
+          this.isFalling = false;  // Stop gravity
+        }
       }
     });
 
+    // Function to start AR and hide the button
     function startAR() {
       document.querySelector('a-scene').setAttribute('ground-bounce', '');
       document.getElementById('startButton').style.display = 'none';

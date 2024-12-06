@@ -1,61 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Bouncing Ball Game</title>
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe-ar@latest/dist/aframe-ar.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XRise VR Platform</title>
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 </head>
-<body style="margin: 0; overflow: hidden;">
-    <a-scene 
-        vr-mode-ui="enabled: false" 
-        embedded 
-        arjs="sourceType: webcam; debugUIEnabled: false;">
-        
-        <!-- Ball -->
-        <a-sphere id="ball" 
-                  position="0 1 -2" 
-                  radius="0.1" 
-                  color="#FF4500" 
-                  dynamic-body></a-sphere>
+<body>
+  <a-scene>
+    <!-- Background and Sky -->
+    <a-sky color="#88d3e3"></a-sky>
+    
+    <!-- Navbar -->
+    <a-entity position="0 3.7 -5">
+      <a-text value="Home | About | Features | Contact Us" align="center" color="#ffffff" width="6"></a-text>
+    </a-entity>
+    <a-entity position="-3 1.5 -4">
+      <a-box color="#4CC3D9" depth="0.1" height="1" width="1.5"></a-box>
+      <a-text value="About Us" color="#ffffff" align="center" position="0 0.3 0.06" width="9"></a-text>
+    </a-entity>
 
-        <!-- Ground -->
-        <a-plane position="0 0 -2" 
-                 rotation="-90 0 0" 
-                 width="4" 
-                 height="4" 
-                 color="#4CAF50" 
-                 static-body></a-plane>
+    <a-entity position="0 1.5 -4">
+      <a-box color="#FFC65D" depth="0.1" height="1" width="1.5"></a-box>
+      <a-text value="Features" color="#ffffff" align="center" position="0 0.3 0.06" width="8.5"></a-text>
+    </a-entity>
 
-        <!-- Light -->
-        <a-light type="directional" position="0 4 -2" intensity="1"></a-light>
+    <a-entity position="3 1.5 -4">
+      <a-box color="#FF5722" depth="0.1" height="1" width="1.5"></a-box>
+      <a-text value="Contact" color="#ffffff" align="center" position="0 0.3 0.06" width="9"></a-text>
+    </a-entity>
 
-        <!-- Camera -->
-        <a-camera position="0 1.6 0"></a-camera>
-    </a-scene>
+    <a-entity position="0 4 -4">
+      <a-text 
+        value="Welcome to XRise" 
+        align="center" 
+        color="#ff5722" 
+        width="8" 
+        font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-text>
+    </a-entity>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const ball = document.querySelector('#ball');
-            const initialVelocity = new THREE.Vector3(0, 3, -3);
+    <a-entity position="0 3.5 -4">
+      <a-text value="Empowering children with ASD through VR" align="center" color="#ffffff" width="5"></a-text>
+    </a-entity>
 
-            const throwBall = () => {
-                const el = ball.getAttribute('velocity') || new THREE.Vector3();
-                ball.setAttribute('velocity', {
-                    x: initialVelocity.x,
-                    y: initialVelocity.y,
-                    z: initialVelocity.z
-                });
-            };
+    <a-sphere 
+      position="0 0.5 -3" 
+      radius="0.5" 
+      color="#EF2D5E" 
+      animation__hover="property: scale; to: 1.2 1.2 1.2; startEvents: mouseenter"
+      animation__leave="property: scale; to: 1 1 1; startEvents: mouseleave"
+      event-set__click="color: #FFC65D"
+      onclick="alert('Button clicked! Navigating to Features page.')">
+    </a-sphere>
+    <a-sphere 
+      position="0 1.5 -6d" 
+      radius="0.9" 
+      color="#EF2D5E" 
+      animation__hover="property: scale; to: 1.2 1.2 1.2; startEvents: mouseenter"
+      animation__leave="property: scale; to: 1 1 1; startEvents: mouseleave"
+      event-set__click="color: #FFC65D"
+      onclick="alert('Button clicked! Navigating to Features page.')">
+    </a-sphere>
 
-            // Event listeners for throwing the ball
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'w') throwBall();
-            });
-            document.addEventListener('click', throwBall);
-            document.addEventListener('touchstart', throwBall);
-        });
-    </script>
+    <a-torus position="-2 0.5 -3" radius="1" radius-tubular="0.2" color="#7BC8A4"></a-torus>
+    <a-cylinder position="2 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
+    <a-sphere position="1.5 2 -3.5" radius="0.5" color="#4CC3D9"></a-sphere>
+    <a-cylinder position="-5 0.75 -10" radius="0.2" height="3" color="#8B4513" static-body></a-cylinder>
+    <a-sphere position="-5 3 -10" radius="1" color="#228B22" static-body></a-sphere>
+
+    <a-cylinder position="5 0.75 -10" radius="0.2" height="3" color="#8B4513" static-body></a-cylinder>
+    <a-sphere position="5 3 -10" radius="1" color="#228B22" static-body></a-sphere>
+
+    <!-- New Elements -->
+    <!-- Car -->
+    <a-entity position="2 0 -5" rotation="0 45 0">
+      <a-box position="0 0.5 0" depth="2" height="0.5" width="1" color="blue"></a-box>
+      <a-box position="0 1 0.5" depth="0.5" height="0.5" width="1" color="blue"></a-box>
+      <a-cylinder position="0.5 0 0.9" radius="0.2" height="0.1" color="black"></a-cylinder>
+      <a-cylinder position="-0.5 0 0.9" radius="0.2" height="0.1" color="black"></a-cylinder>
+      <a-cylinder position="0.5 0 -0.9" radius="0.2" height="0.1" color="black"></a-cylinder>
+      <a-cylinder position="-0.5 0 -0.9" radius="0.2" height="0.1" color="black"></a-cylinder>
+    </a-entity>
+    
+    <!-- House -->
+    <a-entity position="-2 0 -5">
+      <a-box position="0 1 0" depth="2" height="2" width="2" color="#8B4513"></a-box>
+      <a-cone position="0 2 0" radius-bottom="1.2" height="1" color="#D2691E"></a-cone>
+    </a-entity>
+    
+    <!-- Complex 3D Figure (Tree) -->
+    <a-cylinder position="-3 0 -3" radius="0.2" height="2" color="#8B4513"></a-cylinder>
+    <a-sphere position="-3 2 -3" radius="1" color="#228B22"></a-sphere>
+    <a-sphere position="-3 2.5 -3" radius="0.8" color="#228B22"></a-sphere>
+    <a-sphere position="-3 3 -3" radius="0.6" color="#228B22"></a-sphere>
+
+    <a-entity position="0 -1 -4">
+      <a-text value="© 2024 XRise Platform - All Rights Reserved" align="center" color="#ffffff" width="3"></a-text>
+    </a-entity>
+
+    <a-plane position="0 0 -4" rotation="-90 0 0" width="50" height="50" color="#00FF00"></a-plane>
+  </a-scene>
 </body>
 </html>

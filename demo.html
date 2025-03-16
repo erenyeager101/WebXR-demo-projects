@@ -1,70 +1,252 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>XRise VR Platform</title>
-  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <title>XRise Immersive Experience</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://unpkg.com/aframe-event-set-component@5.0.0/dist/aframe-event-set-component.min.js"></script>
+    <script src="https://unpkg.com/aframe-particle-system-component@1.1.x/dist/aframe-particle-system-component.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-animation-component@5.1.2/dist/aframe-animation-component.min.js"></script>
+    <script src="https://unpkg.com/aframe-htmlembed-component@0.2.0/dist/aframe-htmlembed-component.min.js"></script>
+    <style>
+        .interaction-hint {
+            position: fixed;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-family: Arial;
+            z-index: 9999;
+        }
+    </style>
 </head>
 <body>
-  <a-scene>
-    <!-- Background and Sky -->
-    <a-sky color="#88d3e3"></a-sky>
-    
-    <!-- Navbar -->
-    <a-entity position="0 2.5 -5">
-      <a-text value="Home | About | Features | Contact Us" align="center" color="#ffffff" width="6"></a-text>
+    <div class="interaction-hint" id="hint">Use mouse to look around and click to interact!</div>
+
+<a-scene cursor="rayOrigin: mouse" loading-screen="dotsColor: #ff3366; backgroundColor: #1a1a2e">
+    <!-- Environment System -->
+    <a-entity id="environment">
+        <a-sky color="#1a1a2e"></a-sky>
+        <a-entity particle-system="preset: star; color: #FFFFFF; particleCount: 2000; size: 0.1"></a-entity>
+        <a-light type="ambient" color="#4455ff"></a-light>
+        <a-light type="point" intensity="0.8" position="5 5 5"></a-light>
     </a-entity>
 
-    <!-- Title -->
-    <a-entity position="0 1.5 -4">
-      <a-text value="Welcome to XRise" align="center" color="#ff5722" width="4"></a-text>
+    <!-- Navigation System -->
+    <a-entity id="navSystem">
+        <!-- Main Platform -->
+        <a-entity id="mainPlatform" position="0 0 -10">
+            <a-circle color="#2a2a4a" rotation="-90 0 0" radius="12">
+                <a-animation attribute="rotation" dur="30000" to="0 0 360" repeat="indefinite"></a-animation>
+            </a-circle>
+
+            <!-- Holographic Title -->
+            <a-text value="X RISE" position="0 5 -2" align="center" 
+                    font="exocet" width="8" color="#00e5ff"
+                    animation="property: position; to: 0 5.2 -2; dir: alternate; loop: true; dur: 2000">
+                <a-text value="Empowering Lives Through VR/AR" position="0 -0.8 0" 
+                        align="center" width="6" color="#ffffff"></a-text>
+            </a-text>
+
+            <!-- Interactive Robot Guide -->
+            <a-entity id="guideRobot" gltf-model="#robotModel" position="0 1.5 -2" scale="0.6 0.6 0.6"
+                      animation="property: rotation; to: 0 360 0; loop: true; dur: 15000"
+                      sound="on: click; src: #clickSound">
+                <a-text value="Click me for help!" position="0 3 0" align="center" 
+                        color="#ffffff" visible="false" class="clickable-text"></a-text>
+            </a-entity>
+
+            <!-- Teleportation Orbs -->
+            <a-entity class="teleportOrb" position="-4 2 0" 
+                      animation="property: position; to: -4 2.5 0; dir: alternate; loop: true; dur: 2000"
+                      onclick="activatePortal('features')">
+                <a-sphere color="#4CAF50" radius="0.4" transparent="true" opacity="0.8">
+                    <a-text value="Features" position="0 -0.6 0" align="center" color="white"></a-text>
+                </a-sphere>
+            </a-entity>
+
+            <a-entity class="teleportOrb" position="4 2 0" 
+                      animation="property: position; to: 4 2.5 0; dir: alternate; loop: true; dur: 2000"
+                      onclick="activatePortal('about')">
+                <a-sphere color="#FF5722" radius="0.4" transparent="true" opacity="0.8">
+                    <a-text value="About" position="0 -0.6 0" align="center" color="white"></a-text>
+                </a-sphere>
+            </a-entity>
+        </a-entity>
+
+        <!-- Features Dimension -->
+        <a-entity id="featuresDimension" position="0 0 -30" visible="false">
+            <a-circle color="#1a1a4a" rotation="-90 0 0" radius="15">
+                <a-animation attribute="rotation" dur="45000" to="0 0 360" repeat="indefinite"></a-animation>
+            </a-circle>
+
+            <!-- Interactive Feature Cards -->
+            <a-entity class="featureCard" position="-5 2 0" rotation="0 30 0">
+                <a-box color="#4CAF50" depth="0.5" height="1.5" width="2" 
+                       event-set__mouseenter="scale: 1.1 1.1 1.1"
+                       event-set__mouseleave="scale: 1 1 1"
+                       onclick="showFeatureDetail('ai')">
+                    <a-text value="AI-Driven Learning" position="0 1.1 0.26" 
+                            width="3" align="center" color="white"></a-text>
+                    <a-entity gltf-model="#aiBrainModel" scale="0.3 0.3 0.3" position="0 0 0.25"></a-entity>
+                </a-box>
+            </a-entity>
+
+            <!-- Add other feature cards similarly -->
+
+            <!-- Progress Tracker -->
+            <a-entity id="progressPassport" position="0 2 -3" rotation="0 180 0">
+                <a-book pages="front: #passportFront; back: #passportBack" 
+                        width="1.5" height="1" depth="0.1"
+                        animation__open="property: rotation; to: 0 180 0; dur: 1000"
+                        event-set__mouseenter="scale: 1.05 1.05 1.05"
+                        event-set__mouseleave="scale: 1 1 1">
+                </a-book>
+            </a-entity>
+        </a-entity>
+
+        <!-- About Dimension -->
+        <a-entity id="aboutDimension" position="0 0 20" visible="false">
+            <!-- Interactive Headset Display -->
+            <a-entity id="headsetDisplay" position="0 2 0" 
+                      animation="property: rotation; to: 0 360 0; loop: true; dur: 20000">
+                <a-entity gltf-model="#headsetModel" scale="1.2 1.2 1.2">
+                    <a-text value="Our Custom VR Headset" position="0 -1.5 0" 
+                            width="3" align="center" color="white"></a-text>
+                </a-entity>
+            </a-entity>
+
+            <!-- Interactive Timeline -->
+            <a-entity id="timeline" position="0 2 -5">
+                <a-curvedimage src="#timelineTexture" radius="8" theta-length="180" height="2"
+                              rotation="0 90 0" position="0 0 0">
+                    <a-animation attribute="radius" dur="3000" to="8.5" 
+                                 repeat="indefinite" direction="alternate"></a-animation>
+                </a-curvedimage>
+            </a-entity>
+        </a-entity>
     </a-entity>
 
-    <!-- Subtitle -->
-    <a-entity position="0 1.2 -4">
-      <a-text value="Empowering children with ASD through VR" align="center" color="#ffffff" width="3"></a-text>
+    <!-- Audio System -->
+    <a-entity id="soundSystem">
+        <a-sound src="#ambientMusic" autoplay="true" loop="true" volume="0.3"></a-sound>
+        <a-sound id="portalSound" src="#portalSound"></a-sound>
+        <a-sound id="achievementSound" src="#achievementSound"></a-sound>
     </a-entity>
 
-    <!-- Interactive Sphere Button -->
-    <a-sphere 
-      position="0 0.5 -3" 
-      radius="0.5" 
-      color="#EF2D5E" 
-      animation__hover="property: scale; to: 1.2 1.2 1.2; startEvents: mouseenter"
-      animation__leave="property: scale; to: 1 1 1; startEvents: mouseleave"
-      event-set__click="color: #FFC65D"
-      onclick="alert('Button clicked! Navigating to Features page.')">
-    </a-sphere>
-
-    <!-- Cards Section -->
-    <a-entity position="-3 1.5 -4">
-      <a-box color="#4CC3D9" depth="0.1" height="1" width="1.5"></a-box>
-      <a-text value="About Us" color="#ffffff" align="center" position="0 0.3 0.06" width="1"></a-text>
+    <!-- UI System -->
+    <a-entity id="uiSystem">
+        <a-entity htmlembed="target: #hint; zOffset: 2" position="0 0 -1"></a-entity>
+        <a-entity id="infoPanel" position="0 3 -2" visible="false">
+            <a-plane color="#ffffff" width="4" height="2.5" opacity="0.9">
+                <a-text id="panelText" value="" align="center" width="3.5" 
+                        position="0 0.5 0.01" color="#000000"></a-text>
+                <a-ring color="#ff0000" radius-inner="0.4" radius-outer="0.5" 
+                        position="1.8 -1 0.01" onclick="closePanel()">
+                    <a-text value="X" position="0 0 0.01" align="center" color="white"></a-text>
+                </a-ring>
+            </a-plane>
+        </a-entity>
     </a-entity>
+</a-scene>
 
-    <a-entity position="0 1.5 -4">
-      <a-box color="#FFC65D" depth="0.1" height="1" width="1.5"></a-box>
-      <a-text value="Features" color="#ffffff" align="center" position="0 0.3 0.06" width="1"></a-text>
-    </a-entity>
+<script>
+// Game State Manager
+const XRiseGame = {
+    currentDimension: 'main',
+    unlockedAchievements: [],
+    visitedSections: [],
+    collectedItems: [],
 
-    <a-entity position="3 1.5 -4">
-      <a-box color="#FF5722" depth="0.1" height="1" width="1.5"></a-box>
-      <a-text value="Contact" color="#ffffff" align="center" position="0 0.3 0.06" width="1"></a-text>
-    </a-entity>
+    init() {
+        this.setupEventListeners();
+        this.startTutorial();
+    },
 
-    <!-- 3D Objects for Decor -->
-    <a-torus position="-2 0.5 -3" radius="1" radius-tubular="0.2" color="#7BC8A4"></a-torus>
-    <a-cylinder position="2 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
-    <a-sphere position="1.5 2 -3.5" radius="0.5" color="#4CC3D9"></a-sphere>
+    setupEventListeners() {
+        // Robot Guide Interaction
+        document.querySelector('#guideRobot').addEventListener('click', () => {
+            this.showInfoPanel("Welcome to XRise! Explore our platform using the glowing orbs. Click objects to interact!");
+        });
 
-    <!-- Footer -->
-    <a-entity position="0 -1 -4">
-      <a-text value="© 2024 XRise Platform - All Rights Reserved" align="center" color="#ffffff" width="3"></a-text>
-    </a-entity>
+        // Portal Activation
+        window.activatePortal = (type) => {
+            document.querySelector('#portalSound').components.sound.playSound();
+            switch(type) {
+                case 'features':
+                    this.transitionToDimension('features');
+                    break;
+                case 'about':
+                    this.transitionToDimension('about');
+                    break;
+                case 'main':
+                    this.returnToMain();
+                    break;
+            }
+        };
+    },
 
-    <!-- Ground -->
-    <a-plane position="0 0 -4" rotation="-90 0 0" width="10" height="10" color="#ECECEC"></a-plane>
-  </a-scene>
+    transitionToDimension(dimension) {
+        const current = document.querySelector(`#${this.currentDimension}Dimension`);
+        const target = document.querySelector(`#${dimension}Dimension`);
+        
+        current.setAttribute('visible', 'false');
+        target.setAttribute('visible', 'true');
+        this.currentDimension = dimension;
+        
+        this.addAchievement(`Visited ${dimension} Section`);
+        this.updateProgressPassport();
+    },
+
+    showInfoPanel(text) {
+        const panel = document.querySelector('#infoPanel');
+        panel.setAttribute('visible', 'true');
+        document.querySelector('#panelText').setAttribute('value', text);
+    },
+
+    closePanel() {
+        document.querySelector('#infoPanel').setAttribute('visible', 'false');
+    },
+
+    addAchievement(achievement) {
+        if(!this.unlockedAchievements.includes(achievement)) {
+            this.unlockedAchievements.push(achievement);
+            document.querySelector('#achievementSound').components.sound.playSound();
+            this.showInfoPanel(`Achievement Unlocked: ${achievement}`);
+        }
+    },
+
+    updateProgressPassport() {
+        // Update 3D passport model with collected stamps
+    },
+
+    startTutorial() {
+        setTimeout(() => {
+            this.showInfoPanel("Welcome to XRise VR Experience!\n\nLook around using your mouse or VR headset.\nClick glowing objects to interact!");
+        }, 3000);
+    }
+};
+
+// Initialize Game
+window.onload = () => XRiseGame.init();
+</script>
+
+<!-- Asset Preloading -->
+<a-assets>
+    <!-- 3D Models -->
+    <a-asset-item id="robotModel" src="assets/models/guide_robot.glb"></a-asset-item>
+    <a-asset-item id="headsetModel" src="assets/models/xrise_headset.glb"></a-asset-item>
+    <a-asset-item id="aiBrainModel" src="assets/models/ai_brain.glb"></a-asset-item>
+
+    <!-- Textures -->
+    <img id="passportFront" src="assets/textures/passport_front.png">
+    <img id="passportBack" src="assets/textures/passport_back.png">
+    <img id="timelineTexture" src="assets/textures/timeline.png">
+
+    <!-- Audio -->
+    <audio id="ambientMusic" src="assets/audio/ambient.mp3"></audio>
+    <audio id="portalSound" src="assets/audio/portal_transition.wav"></audio>
+    <audio id="achievementSound" src="assets/audio/achievement_unlock.mp3"></audio>
+    <audio id="clickSound" src="assets/audio/soft_click.wav"></audio>
+</a-assets>
 </body>
 </html>

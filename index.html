@@ -1,64 +1,194 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>AR Pick & Place Game</title>
-    <!-- A-Frame Library -->
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <!-- AR.js for A-Frame -->
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    <!-- A-Frame Drag Component -->
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-drag-component@3.0.0/dist/aframe-drag-component.min.js"></script>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Enterprise Level AR Pick and Place Game</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+    #info {
+      position: absolute;
+      top: 10px;
+      width: 100%;
+      text-align: center;
+      z-index: 1;
+      color: white;
+      font-family: sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div id="info">Tap on the object to pick it up, drag it, and release near the target reticle to place it.</div>
+  
+  <!-- Three.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r139/three.min.js"></script>
+  <!-- ARButton to start AR session -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.139.0/examples/jsm/webxr/ARButton.js"></script>
+  
+  <script>
+    let camera, scene, renderer;
+    let controller, reticle;
+    let selectedObject = null;
+    let objects = []; // Array to hold draggable objects
+    let offset = new THREE.Vector3(); // Offset for drag calculations
 
-    <style>
-      body, html { margin: 0; overflow: hidden; width: 100%; height: 100%; }
-    </style>
-    
-    <script>
-      // Custom component to check placement of the draggable object.
-      AFRAME.registerComponent('check-placement', {
-        schema: {
-          target: { type: 'vec3', default: { x: 0, y: 0.01, z: 0 } },
-          threshold: { type: 'number', default: 0.5 }
-        },
-        init: function () {
-          this.el.addEventListener('dragend', () => {
-            // Get the current world position of the object.
-            const boxPos = new THREE.Vector3();
-            this.el.object3D.getWorldPosition(boxPos);
+    // Variables for AR hit testing
+    let hitTestSource = null;
+    let hitTestSourceRequested = false;
 
-            // Calculate the distance from the target placement zone.
-            const targetPos = new THREE.Vector3(this.data.target.x, this.data.target.y, this.data.target.z);
-            const distance = boxPos.distanceTo(targetPos);
+    init();
+    animate();
 
-            // If within threshold, consider the object successfully placed.
-            if (distance < this.data.threshold) {
-              // Here you could add gamification elements like score increments.
-              alert("Congratulations! You placed the object correctly!");
-            }
-          });
-        }
+    function init() {
+      // Create Scene and Camera
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x000000);
+      camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+
+      // Renderer setup with XR enabled
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.xr.enabled = true;
+      document.body.appendChild(renderer.domElement);
+
+      // Add ARButton (requires hit-test feature)
+      document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
+
+      // Add lighting to the scene
+      const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+      light.position.set(0.5, 1, 0.25);
+      scene.add(light);
+
+      // Create a ground plane for visual reference (the target surface)
+      const planeGeometry = new THREE.PlaneGeometry(2, 2);
+      const planeMaterial = new THREE.MeshBasicMaterial({ color: 0x7BC8A4, side: THREE.DoubleSide });
+      const ground = new THREE.Mesh(planeGeometry, planeMaterial);
+      ground.rotation.x = - Math.PI / 2;
+      ground.position.y = 0;
+      scene.add(ground);
+
+      // Create a draggable box (the object to pick and place)
+      const boxGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+      const boxMaterial = new THREE.MeshStandardMaterial({ color: 0xff6347 });
+      const box = new THREE.Mesh(boxGeometry, boxMaterial);
+      box.position.set(0, 0.1, -0.5);
+      box.userData.draggable = true; // Mark as draggable
+      scene.add(box);
+      objects.push(box);
+
+      // Create a reticle for hit testing (shows where the object can be placed)
+      reticle = new THREE.Mesh(
+        new THREE.RingGeometry(0.15, 0.2, 32).rotateX(- Math.PI / 2),
+        new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide })
+      );
+      reticle.matrixAutoUpdate = false;
+      reticle.visible = false;
+      scene.add(reticle);
+
+      // Set up AR controller to handle input events
+      controller = renderer.xr.getController(0);
+      controller.addEventListener('selectstart', onSelectStart);
+      controller.addEventListener('selectend', onSelectEnd);
+      scene.add(controller);
+
+      // Listen for window resize events
+      window.addEventListener('resize', onWindowResize, false);
+
+      // When the AR session starts, set up hit test source
+      renderer.xr.addEventListener('sessionstart', onSessionStart);
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // Set up AR hit testing
+    function onSessionStart() {
+      const session = renderer.xr.getSession();
+      session.addEventListener('end', () => {
+        hitTestSourceRequested = false;
+        hitTestSource = null;
       });
-    </script>
-  </head>
-  <body>
-    <a-scene embedded arjs="trackingMethod: best;">
-      <!-- Assets (you can add models and other assets here) -->
-      <a-assets>
-        <!-- Example: <a-asset-item id="boxModel" src="path_to_model.gltf"></a-asset-item> -->
-      </a-assets>
-      
-      <!-- AR Marker: Using the Hiro marker as a base -->
-      <a-marker preset="hiro">
-        <!-- Draggable Box with the check-placement component attached -->
-        <a-box id="box" position="0 0.5 0" depth="0.3" height="0.3" width="0.3" color="#FF6347"
-               draggable="true" check-placement></a-box>
-        <!-- The target surface (a simple plane) where the box should be placed -->
-        <a-plane id="surface" position="0 0.01 0" rotation="-90 0 0" width="1.5" height="1.5" color="#7BC8A4"></a-plane>
-      </a-marker>
+    }
 
-      <!-- A simple camera entity -->
-      <a-entity camera></a-entity>
-    </a-scene>
-  </body>
+    // Called when user initiates object selection (tap on object)
+    function onSelectStart(event) {
+      // Use a raycaster to detect if a draggable object is intersected
+      const tempMatrix = new THREE.Matrix4();
+      tempMatrix.identity().extractRotation(controller.matrixWorld);
+      const raycaster = new THREE.Raycaster();
+      raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+      raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+
+      const intersects = raycaster.intersectObjects(objects);
+      if (intersects.length > 0) {
+        selectedObject = intersects[0].object;
+        // Calculate offset between the controller hit point and the object’s position
+        offset.copy(intersects[0].point).sub(selectedObject.position);
+      }
+    }
+
+    // Called when the user releases the object
+    function onSelectEnd(event) {
+      if (selectedObject) {
+        // If the reticle is visible and the object is close, snap it to the reticle
+        if (reticle.visible) {
+          const distance = selectedObject.position.distanceTo(reticle.position);
+          if (distance < 0.3) {
+            selectedObject.position.copy(reticle.position);
+            // Enterprise-level gamification: you could update a score, trigger animations, etc.
+            console.log("Object placed successfully!");
+          }
+        }
+        selectedObject = null;
+      }
+    }
+
+    function animate() {
+      renderer.setAnimationLoop(render);
+    }
+
+    function render(timestamp, frame) {
+      if (frame) {
+        const referenceSpace = renderer.xr.getReferenceSpace();
+        const session = renderer.xr.getSession();
+
+        // Request hit testing source if not yet requested
+        if (!hitTestSourceRequested) {
+          session.requestReferenceSpace('viewer').then((viewerSpace) => {
+            session.requestHitTestSource({ space: viewerSpace }).then((source) => {
+              hitTestSource = source;
+            });
+          });
+          hitTestSourceRequested = true;
+        }
+
+        // Perform hit testing to position the reticle on real-world surfaces
+        if (hitTestSource) {
+          const hitTestResults = frame.getHitTestResults(hitTestSource);
+          if (hitTestResults.length > 0) {
+            const hit = hitTestResults[0];
+            const pose = hit.getPose(referenceSpace);
+            reticle.visible = true;
+            reticle.matrix.fromArray(pose.transform.matrix);
+          } else {
+            reticle.visible = false;
+          }
+        }
+
+        // If an object is selected, update its position based on the controller’s position
+        if (selectedObject) {
+          const controllerPosition = new THREE.Vector3();
+          controllerPosition.setFromMatrixPosition(controller.matrixWorld);
+          selectedObject.position.copy(controllerPosition).sub(offset);
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+  </script>
+</body>
 </html>
